@@ -38,3 +38,13 @@ Legacy `OAG_*` env vars still work as fallback for `BMD_*`.
 - Without `S3_ENDPOINT` + `S3_BUCKET`, rows are stored without photo upload.
 
 See `.env.example` and `bmd fetch --help`.
+
+## Mise tasks
+
+```sh
+mise run build
+mise run fetch -- --dataset all --max-pages 2 --verbose
+mise run fetch:marriages
+mise run fetch:impediments
+mise run stats -- --db bmd.db
+```

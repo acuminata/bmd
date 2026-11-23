@@ -1,2 +1,48 @@
 [tools]
 go = "1.27"
+
+[env]
+BMD_DB = "bmd.db"
+BMD_PAGE_SIZE = "30"
+
+[tasks.build]
+description = "Build the bmd binary"
+sources = ["cmd/**/*.go", "internal/**/*.go", "go.mod"]
+outputs = ["bmd"]
+run = "go build -o bmd ./cmd/bmd"
+
+[tasks.install]
+description = "Install bmd into GOPATH/bin"
+run = "go install ./cmd/bmd"
+
+[tasks.test]
+description = "Run all Go tests"
+run = "go test ./..."
+
+[tasks.vet]
+description = "Vet + build check"
+run = "go vet ./... && go build ./..."
+
+[tasks.tidy]
+description = "Tidy go modules"
+run = "go mod tidy"
+
+[tasks.fetch]
+description = 'Fetch notices: mise run fetch -- --dataset all --max-pages 2 --verbose'
+run = "go run ./cmd/bmd fetch"
+
+[tasks."fetch:marriages"]
+description = "Fetch marriages only"
+run = "go run ./cmd/bmd fetch --dataset marriages"
+
+[tasks."fetch:impediments"]
+description = "Fetch impediments only"
+run = "go run ./cmd/bmd fetch --dataset impediments"
+
+[tasks.stats]
+description = "Show row counts per dataset"
+run = "go run ./cmd/bmd stats"
+
+[tasks.clean]
+description = "Remove built binary and local test databases"
+run = "rm -f bmd /tmp/bmd-test.db bmd-test.db"

@@ -34,3 +34,8 @@ go.work.sum
 # Editor/IDE
 .idea/
 .vscode/
+
+# local build output
+/bmd
+# local sqlite databases
+*.db
