@@ -28,7 +28,7 @@ jobs:
           echo "SHORT_SHA=$SHA" >> "$GITHUB_ENV"
 
       - name: Build image
-        run: docker build -t "bmd:${{ env.SHORT_SHA }}" .
+        run: docker buildx build --load --cache-from type=gha,scope=bmd --cache-to type=gha,mode=max,scope=bmd -t "bmd:${{ env.SHORT_SHA }}" .
 
       - name: Save image
         run: docker save "bmd:${{ env.SHORT_SHA }}" | gzip > /tmp/bmd-image.tar.gz
