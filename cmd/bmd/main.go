@@ -49,7 +49,7 @@ func usage() {
 
 Usage:
   bmd fetch [flags]     download marriages + impediments into sqlite, photos to S3
-  bmd stats --db FILE   show row counts per dataset
+  bmd stats --db FILE   show row counts per kind (domestic/international)
   bmd version           print version
 
 fetch flags (each also settable via the env var shown):
@@ -73,7 +73,8 @@ fetch flags (each also settable via the env var shown):
   --photo-concurrency N                 (default 4)
   --verbose                             (BMD_VERBOSE)
 
-Photos: originals only, stored as {prefix}/{dataset}/{application_number}/{groom|bride}_original{ext}.
+Photos: originals only, stored as {prefix}/{kind}/{application_number}/{groom|bride}_original{ext}.
+marriages are stored as kind=domestic, impediments as kind=international.
 Existing application_number rows are skipped (INSERT OR IGNORE) including their photos.
 
 Examples:

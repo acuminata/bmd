@@ -33,7 +33,8 @@ type Stats struct {
 	PhotosFailed int
 }
 
-// Run crawls each dataset page-by-page, inserts new entries
+// Run crawls each dataset page-by-page (marriages as domestic, impediments
+// as international), inserts new entries
 // (INSERT OR IGNORE on application_number), and uploads the two
 // original photos to S3 for newly inserted rows only.
 func Run(ctx context.Context, client *api.Client, db *store.DB, up *s3store.Uploader, opt Options) (Stats, error) {
@@ -53,6 +54,7 @@ func Run(ctx context.Context, client *api.Client, db *store.DB, up *s3store.Uplo
 	var firstErr error
 
 	for _, dataset := range opt.Datasets {
+		kind := store.KindForDataset(dataset)
 		page := opt.StartPage
 		pagesDone := 0
 		for {
@@ -75,9 +77,9 @@ func Run(ctx context.Context, client *api.Client, db *store.DB, up *s3store.Uplo
 				log.Printf("%s: page %d/%d: %d entries", dataset, resp.PageNumber, resp.TotalPages, len(resp.Entries))
 			}
 			for _, e := range resp.Entries {
-				ok, err := db.InsertIgnore(dataset, e)
+				ok, err := db.InsertIgnore(kind, e)
 				if err != nil {
-					return st, fmt.Errorf("insert %s %s: %w", dataset, e.ApplicationNumber, err)
+					return st, fmt.Errorf("insert %s %s: %w", kind, e.ApplicationNumber, err)
 				}
 				if !ok {
 					st.Skipped++
@@ -92,7 +94,7 @@ func Run(ctx context.Context, client *api.Client, db *store.DB, up *s3store.Uplo
 				go func(ent model.Entry) {
 					defer wg.Done()
 					defer func() { <-sem }()
-					groomURL, brideURL := uploadPhotos(ctx, client, up, dataset, ent)
+					groomURL, brideURL := uploadPhotos(ctx, client, up, kind, ent)
 					mu.Lock()
 					defer mu.Unlock()
 					if groomURL == "" && brideURL == "" && (ent.BrideGroomsPhoto != "" || ent.BridesPhoto != "") {
@@ -100,7 +102,7 @@ func Run(ctx context.Context, client *api.Client, db *store.DB, up *s3store.Uplo
 					} else {
 						st.PhotosOK++
 					}
-					if err := db.UpdatePhotos(dataset, ent.ApplicationNumber, groomURL, brideURL); err != nil {
+					if err := db.UpdatePhotos(kind, ent.ApplicationNumber, groomURL, brideURL); err != nil {
 						log.Printf("update photos %s: %v", ent.ApplicationNumber, err)
 						if firstErr == nil {
 							firstErr = err
@@ -129,14 +131,14 @@ func Run(ctx context.Context, client *api.Client, db *store.DB, up *s3store.Uplo
 	return st, firstErr
 }
 
-func uploadPhotos(ctx context.Context, client *api.Client, up *s3store.Uploader, dataset string, e model.Entry) (groomURL, brideURL string) {
+func uploadPhotos(ctx context.Context, client *api.Client, up *s3store.Uploader, kind string, e model.Entry) (groomURL, brideURL string) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	if e.BrideGroomsPhoto != "" {
 		if data, ct, err := client.Download(ctx, e.BrideGroomsPhoto); err != nil {
 			log.Printf("photo download groom %s: %v", e.ApplicationNumber, err)
 		} else {
-			key := up.KeyFor(dataset, e.ApplicationNumber, "groom", e.BrideGroomsPhoto, ct)
+			key := up.KeyFor(kind, e.ApplicationNumber, "groom", e.BrideGroomsPhoto, ct)
 			if stored, err := up.Put(ctx, key, data, contentTypeOr(ct, data)); err != nil {
 				log.Printf("photo upload groom %s: %v", e.ApplicationNumber, err)
 			} else {
@@ -148,7 +150,7 @@ func uploadPhotos(ctx context.Context, client *api.Client, up *s3store.Uploader,
 		if data, ct, err := client.Download(ctx, e.BridesPhoto); err != nil {
 			log.Printf("photo download bride %s: %v", e.ApplicationNumber, err)
 		} else {
-			key := up.KeyFor(dataset, e.ApplicationNumber, "bride", e.BridesPhoto, ct)
+			key := up.KeyFor(kind, e.ApplicationNumber, "bride", e.BridesPhoto, ct)
 			if stored, err := up.Put(ctx, key, data, contentTypeOr(ct, data)); err != nil {
 				log.Printf("photo upload bride %s: %v", e.ApplicationNumber, err)
 			} else {

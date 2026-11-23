@@ -61,8 +61,8 @@ func New(cfg Config) (*Uploader, error) {
 
 // KeyFor builds the object key for an original photo:
 //
-//	{prefix}/{dataset}/{application_number}/{slot}_original{ext}
-func (u *Uploader) KeyFor(dataset, applicationNumber, slot, photoPath, contentType string) string {
+//	{prefix}/{kind}/{application_number}/{slot}_original{ext}
+func (u *Uploader) KeyFor(kind, applicationNumber, slot, photoPath, contentType string) string {
 	ext := extFrom(contentType, photoPath)
 	slot = strings.ToLower(strings.TrimSpace(slot))
 	if slot != "groom" && slot != "bride" {
@@ -73,7 +73,7 @@ func (u *Uploader) KeyFor(dataset, applicationNumber, slot, photoPath, contentTy
 	if prefix != "" {
 		parts = append(parts, prefix)
 	}
-	parts = append(parts, strings.Trim(dataset, "/"), sanitize(applicationNumber), fmt.Sprintf("%s_original%s", slot, ext))
+	parts = append(parts, strings.Trim(kind, "/"), sanitize(applicationNumber), fmt.Sprintf("%s_original%s", slot, ext))
 	return path.Join(parts...)
 }
 
