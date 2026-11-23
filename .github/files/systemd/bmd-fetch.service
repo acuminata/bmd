@@ -1,0 +1,9 @@
+[Unit]
+Description=bmd notice-board fetch (marriages + impediments)
+Wants=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+Environment=IMAGE=bmd:latest
+ExecStart=/usr/bin/docker run --rm --name bmd-fetch -v bmd-data:/data --env-file /etc/bmd/env ${IMAGE} fetch --db /data/bmd.db --dataset all

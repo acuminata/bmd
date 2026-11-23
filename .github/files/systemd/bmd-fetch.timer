@@ -1,0 +1,11 @@
+[Unit]
+Description=Run bmd-fetch every two days at 03:00 EAT
+
+[Timer]
+OnCalendar=*-*-01/2 03:00:00
+Persistent=true
+RandomizedDelaySec=5m
+Unit=bmd-fetch.service
+
+[Install]
+WantedBy=timers.target

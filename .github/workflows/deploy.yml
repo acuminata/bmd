@@ -1,0 +1,103 @@
+name: build and deploy
+
+on:
+  push:
+    branches: [main]
+
+  workflow_dispatch:
+    inputs:
+
+concurrency: #A newer push waits until the current run
+  group: deploy-ci
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4.4.1
+
+      - name: Set release version
+        run: |
+          SHA="$(git rev-parse --short HEAD)"
+          echo "SHORT_SHA=$SHA" >> "$GITHUB_ENV"
+
+      - name: Build image
+        run: docker build -t "bmd:${{ env.SHORT_SHA }}" -t bmd:latest .
+
+      - name: Save image
+        run: docker save "bmd:${{ env.SHORT_SHA }}" bmd:latest | gzip > /tmp/bmd-image.tar.gz
+
+      - name: Configure SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/vps_key
+          chmod 600 ~/.ssh/vps_key
+
+      - name: Upload and load image
+        env:
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_USER: ${{ vars.VPS_USER }}
+          VPS_PORT: ${{ vars.VPS_PORT }}
+        run: |
+          OPTS="-i ~/.ssh/vps_key -p $VPS_PORT -o StrictHostKeyChecking=accept-new"
+          
+          #Upload
+          scp "$OPTS" /tmp/bmd-image.tar.gz "$VPS_USER@$VPS_HOST:/tmp/bmd-image.tar.gz"
+          
+          #load
+          ssh "$OPTS" "$VPS_USER@$VPS_HOST" 'docker load -i /tmp/bmd-image.tar.gz'
+
+
+      - name: Upload and install service timer
+        env:
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_USER: ${{ vars.VPS_USER }}
+          VPS_PORT: ${{ vars.VPS_PORT }}
+        run: |
+          OPTS="-i ~/.ssh/vps_key -p $VPS_PORT -o StrictHostKeyChecking=accept-new"
+
+          scp "$OPTS" -r .github/files/systemd "$VPS_USER@$VPS_HOST:/tmp/bmd-deploy"
+          ssh "$OPTS" "$VPS_USER"@"$VPS_HOST" <<'EOF'
+          set -euo pipefail
+          sudo mkdir -p /etc/bmd
+          
+          if [ ! -f /etc/bmd/env ]; then
+            sudo install -m 600 /dev/null /etc/bmd/env
+            echo "NOTE: created empty /etc/bmd/env - fill in BMD_COOKIE and S3_* secrets"
+          fi
+          
+          sudo cp /tmp/bmd-deploy/bmd-fetch.service /tmp/bmd-deploy/bmd-fetch.timer /etc/systemd/system/
+          
+          sudo systemctl daemon-reload
+          
+          sudo systemctl enable --now bmd-fetch.timer
+          sudo systemctl restart bmd-fetch.service
+          EOF
+
+      - name: Cleanup
+        if: always()
+        env:
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_USER: ${{ vars.VPS_USER }}
+          VPS_PORT: ${{ vars.VPS_PORT }}
+        run: |
+          OPTS="-i ~/.ssh/vps_key -p $VPS_PORT -o StrictHostKeyChecking=accept-new"
+          
+          ssh "$OPTS" "KEEP_SHA=${{ env.SHORT_SHA }} bash -s" <<'EOF'
+          set -euo pipefail
+          rm -f /tmp/bmd-image.tar.gz
+          rm -rf /tmp/bmd-deploy
+          if [ -n "${KEEP_SHA:-}" ]; then
+            docker images bmd --format '{{.Repository}}:{{.Tag}}'  | grep -v -e "bmd:$KEEP_SHA$" -e 'bmd:latest$' | xargs -r docker rmi || true
+          fi
+          EOF
+          
+          #remove the ssh private key
+          rm -f ~/.ssh/vps_key /tmp/bmd-image.tar.gz
