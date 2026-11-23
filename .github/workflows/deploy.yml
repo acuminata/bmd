@@ -28,10 +28,10 @@ jobs:
           echo "SHORT_SHA=$SHA" >> "$GITHUB_ENV"
 
       - name: Build image
-        run: docker build -t "bmd:${{ env.SHORT_SHA }}" -t bmd:latest .
+        run: docker build -t "bmd:${{ env.SHORT_SHA }}" .
 
       - name: Save image
-        run: docker save "bmd:${{ env.SHORT_SHA }}" bmd:latest | gzip > /tmp/bmd-image.tar.gz
+        run: docker save "bmd:${{ env.SHORT_SHA }}" | gzip > /tmp/bmd-image.tar.gz
 
       - name: Configure SSH
         env:
@@ -98,9 +98,9 @@ jobs:
           rm -f /tmp/bmd-image.tar.gz
           rm -rf /tmp/bmd-deploy
           
-           # Remove old Docker images, preserving current SHA and latest
+           # Remove old Docker images, preserving current SHA
           if [ -n "${KEEP_SHA:-}" ]; then
-            docker images bmd --format '{{.Repository}}:{{.Tag}}'  | grep -v -e "bmd:$KEEP_SHA$" -e 'bmd:latest$' | xargs -r docker rmi || true
+            docker images bmd --format '{{.Repository}}:{{.Tag}}'  | grep -v -e "bmd:$KEEP_SHA$" | xargs -r docker rmi || true
           fi
           
           EOF
