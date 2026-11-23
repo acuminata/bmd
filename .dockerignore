@@ -1,0 +1,6 @@
+.git
+bmd
+*.db
+*.db-shm
+*.db-wal
+tmpcheck/

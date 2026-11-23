@@ -4,6 +4,7 @@ go = "1.27"
 [env]
 BMD_DB = "bmd.db"
 BMD_PAGE_SIZE = "30"
+IMAGE_TAG = "{{ exec(command='git rev-parse --short HEAD') }}"
 
 [tasks.build]
 description = "Build the bmd binary"
@@ -46,3 +47,11 @@ run = "go run ./cmd/bmd stats"
 [tasks.clean]
 description = "Remove built binary and local test databases"
 run = "rm -f bmd /tmp/bmd-test.db bmd-test.db"
+
+[tasks."docker:build"]
+description = "Build the bmd container image"
+run = "docker build -t bmd:${IMAGE_TAG:-$(git rev-parse --short HEAD)} ."
+
+[tasks."docker:run"]
+description = "Run bmd in docker (db persists in bmd-data volume): mise docker:run -- fetch --db /data/bmd.db"
+run = "docker run --rm -v bmd-data:/data bmd:${IMAGE_TAG:-$(git rev-parse --short HEAD)}"
