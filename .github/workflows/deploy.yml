@@ -14,6 +14,7 @@ concurrency: #A newer push waits until the current run
 jobs:
   deploy:
     runs-on: ubuntu-26.04
+    environment: erable
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
