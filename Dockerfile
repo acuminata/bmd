@@ -3,7 +3,7 @@ RUN apk add --no-cache ca-certificates
 
 WORKDIR /src
 
-mkdir -p /data
+RUN mkdir -p /data
 
 # Cache Go dependencies
 COPY go.mod go.sum ./
