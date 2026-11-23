@@ -47,13 +47,17 @@ jobs:
           VPS_USER: ${{ vars.VPS_USER }}
           VPS_PORT: ${{ vars.VPS_PORT }}
         run: |
-          OPTS="-i ~/.ssh/vps_key -p $VPS_PORT -o StrictHostKeyChecking=accept-new"
+          OPTS=(
+          -i ~/.ssh/vps_key
+          -p "$VPS_PORT"
+          -o StrictHostKeyChecking=accept-new
+          )
           
           #Upload
-          scp "$OPTS" /tmp/bmd-image.tar.gz "$VPS_USER@$VPS_HOST:/tmp/bmd-image.tar.gz"
+          scp "${OPTS[@]}" /tmp/bmd-image.tar.gz "$VPS_USER"@"$VPS_HOST":/tmp/bmd-image.tar.gz
           
           #load
-          ssh "$OPTS" "$VPS_USER@$VPS_HOST" 'docker load -i /tmp/bmd-image.tar.gz'
+          ssh "${OPTS[@]}" "$VPS_USER@$VPS_HOST" 'docker load -i /tmp/bmd-image.tar.gz'
 
 
       - name: Upload and install service timer
@@ -62,10 +66,15 @@ jobs:
           VPS_USER: ${{ vars.VPS_USER }}
           VPS_PORT: ${{ vars.VPS_PORT }}
         run: |
-          OPTS="-i ~/.ssh/vps_key -p $VPS_PORT -o StrictHostKeyChecking=accept-new"
-
-          scp "$OPTS" -r .github/files/systemd "$VPS_USER@$VPS_HOST:/tmp/bmd-deploy"
-          ssh "$OPTS" "$VPS_USER"@"$VPS_HOST" <<'EOF'
+          OPTS=(
+          -i ~/.ssh/vps_key
+          -p "$VPS_PORT"
+          -o StrictHostKeyChecking=accept-new
+          )
+    
+          scp "${OPTS[@]}" -r .github/files/systemd "$VPS_USER"@"$VPS_HOST":/tmp/bmd-deploy
+          
+          ssh "${OPTS[@]}" "$VPS_USER"@"$VPS_HOST" <<'EOF'
           set -euo pipefail
           sudo mkdir -p /etc/bmd
           
@@ -89,9 +98,13 @@ jobs:
           VPS_USER: ${{ vars.VPS_USER }}
           VPS_PORT: ${{ vars.VPS_PORT }}
         run: |
-          OPTS="-i ~/.ssh/vps_key -p $VPS_PORT -o StrictHostKeyChecking=accept-new"
+          OPTS=(
+          -i ~/.ssh/vps_key
+          -p "$VPS_PORT"
+          -o StrictHostKeyChecking=accept-new
+          )
           
-          ssh "$OPTS" "KEEP_SHA=${{ env.SHORT_SHA }} bash -s" <<'EOF'
+          ssh "${OPTS[@]}" "KEEP_SHA=${{ env.SHORT_SHA }} bash -s" <<'EOF'
           set -euo pipefail
           rm -f /tmp/bmd-image.tar.gz
           rm -rf /tmp/bmd-deploy
