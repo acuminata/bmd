@@ -64,16 +64,23 @@ jobs:
           VPS_HOST: ${{ vars.VPS_HOST }}
           VPS_USER: ${{ vars.VPS_USER }}
           VPS_PORT: ${{ vars.VPS_PORT }}
+          SHORT_SHA: ${{ env.SHORT_SHA }}
         run: |
           scp -i ~/.ssh/vps_key -P "$VPS_PORT" -r .github/files/systemd "$VPS_USER"@"$VPS_HOST":/tmp/bmd-deploy
           
-          ssh -i ~/.ssh/vps_key -p "$VPS_PORT" "$VPS_USER"@"$VPS_HOST" <<'EOF'
+          ssh -i ~/.ssh/vps_key -p "$VPS_PORT" "$VPS_USER"@"$VPS_HOST" "IMAGE=bmd:$SHORT_SHA bash -s" <<'EOF'
           set -euo pipefail
           sudo mkdir -p /etc/bmd
           
           if [ ! -f /etc/bmd/env ]; then
             sudo install -m 600 /dev/null /etc/bmd/env
             echo "NOTE: created empty /etc/bmd/env - fill in BMD_COOKIE and S3_* secrets"
+          fi
+          
+          if sudo grep -q '^IMAGE=' /etc/bmd/env; then
+            sudo sed -i "s|^IMAGE=.*|IMAGE=$IMAGE|" /etc/bmd/env
+          else
+            echo "IMAGE=$IMAGE" | sudo tee -a /etc/bmd/env >/dev/null
           fi
           
           sudo cp /tmp/bmd-deploy/bmd-fetch.service /tmp/bmd-deploy/bmd-fetch.timer /etc/systemd/system/

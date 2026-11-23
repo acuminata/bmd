@@ -5,5 +5,5 @@ After=docker.service
 
 [Service]
 Type=oneshot
-Environment=IMAGE=bmd:latest
+EnvironmentFile=/etc/bmd/env
 ExecStart=/usr/bin/docker run --rm --name bmd-fetch -v bmd-data:/data --env-file /etc/bmd/env ${IMAGE} fetch --db /data/bmd.db --dataset all
