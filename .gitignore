@@ -39,3 +39,6 @@ go.work.sum
 /bmd
 # local sqlite databases
 *.db
+*.db-shm
+*.db-wal
+

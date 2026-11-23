@@ -30,10 +30,12 @@ Legacy `OAG_*` env vars still work as fallback for `BMD_*`.
 ## How it works
 
 - Pages `?page=N&page_size=30` per dataset (`marriages`, `impediments`).
-- Rows stored in SQLite table `notices`, `UNIQUE(dataset, application_number)`,
+- Rows stored in SQLite table `marriage_notices`, `UNIQUE(kind, application_number)`,
   inserted with `INSERT OR IGNORE` so duplicates are skipped with photos untouched.
+- `marriages` are stored as `kind=domestic`, `impediments` as `kind=international`.
+  Upgrading keeps existing rows: the legacy `notices` table is migrated and dropped.
 - New rows download both original photos (`/files/download?...`) and upload to
-  `{prefix}/{dataset}/{application_number}/{groom|bride}_original{ext}`,
+  `{prefix}/{kind}/{application_number}/{groom|bride}_original{ext}`,
   recording the stored URL back in the row.
 - Without `S3_ENDPOINT` + `S3_BUCKET`, rows are stored without photo upload.
 
